@@ -7,3 +7,5 @@ After registration, the output directory of the image is divided into csv and im
 ## Use s2_Usermain_stitch.py to complete image stitching
 The input image requires a dapi channel image named FxRxCh1.png.
 The output result address contains the sub-address Rx\ch1\ and contains relative and absolute position information and result images
+# Reference
+Ma B, Ban X, Huang H, et al. A fast algorithm for material image sequential stitching[J]. Computational Materials Science, 2019, 158: 1-13.
