@@ -1,0 +1,6 @@
+opencv-python~=3.3.1.11
+numpy~=1.19.5
+pyelastix~=1.2
+pillow~=8.4.0
+natsort~=8.2.0
+matplotlib~=3.3.4
