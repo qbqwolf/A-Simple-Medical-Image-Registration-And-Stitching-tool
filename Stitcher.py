@@ -1,4 +1,4 @@
-﻿import numpy as np
+import numpy as np
 import cv2
 # from scipy.stats import mode
 import time
@@ -79,7 +79,7 @@ class Stitcher(Utility.Method):
                 break
             elif status == False and self.ishandle== True:
                 while True:
-                    print(f"please input the offset as a list (e.g., ):{offsetList[-1]}")
+                    print(f"please input the offset as a list (e.g., ):[-974, -2]")
                     offset_input = input()  # 使用 input() 接收用户输入的 offset
                     # 使用正则表达式匹配包含整数的输入
                     match = re.match(r'\[(-?\d+),(-?\d+)\]', offset_input)
@@ -96,7 +96,6 @@ class Stitcher(Utility.Method):
         endTime = time.time()
         inioffset=copy.deepcopy(offsetList)
         self.printAndWrite("The time of registering is " + str(endTime - startTime) + "s")
-
         # stitching and fusing
         self.printAndWrite("start stitching")
         startTime = time.time()
@@ -122,8 +121,12 @@ class Stitcher(Utility.Method):
         while 1:
             (status, roffset,inioffset,stitchResult) = self.flowStitch(fileList[startNum: totalNum], caculateOffsetMethod)
             result.append(stitchResult)
-            np.savetxt(f'{outpath}{r}/{ch}/location{startNum+1}-{startNum+len(roffset)}.txt', roffset, fmt="%d")
-            np.savetxt(f'{outpath}{r}/{ch}/dxdy{startNum+len(roffset)}.txt', inioffset, fmt="%d")
+            if r==None:
+                np.savetxt(f'{outpath}{ch}/location{startNum + 1}-{startNum + len(roffset)}.txt', roffset, fmt="%d")
+                np.savetxt(f'{outpath}{ch}/dxdy{startNum + len(roffset)}.txt', inioffset, fmt="%d")
+            else:
+                np.savetxt(f'{outpath}{r}/{ch}/location{startNum + 1}-{startNum + len(roffset)}.txt', roffset, fmt="%d")
+                np.savetxt(f'{outpath}{r}/{ch}/dxdy{startNum + len(roffset)}.txt', inioffset, fmt="%d")
             self.tempImageFeature.isBreak = True
             if status[1] == 1:
                 startNum = startNum + status[1] + 1
@@ -354,8 +357,10 @@ class Stitcher(Utility.Method):
                 # get the feature points
                 kpsA, featuresA = self.detectAndDescribe(roiImageA, featureMethod=self.featureMethod)
                 kpsB, featuresB = self.detectAndDescribe(roiImageB, featureMethod=self.featureMethod)
+                print(f"图1特征点数为{kpsA.shape[0]},图2特征点数为{kpsB.shape[0]}")
                 if featuresA is not None and featuresB is not None:
                     matches = self.matchDescriptors(featuresA, featuresB)
+                    print(f"匹配点数为{len(matches)}")
                     # self.printAndWrite("  The number of raw matches is " + str(len(matches)))
                     # match all the feature points
                     if self.offsetCaculate == "mode":
