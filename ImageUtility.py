@@ -262,7 +262,7 @@ class Method():
                 fe = SuperPointFrontend(weights_path='./SuperPointPretrainedNetwork/superpoint_v1.pth',  # 权重的路径str
                                         nms_dist=4,  # 非极大值抑制 int距离4
                                         conf_thresh=0.005,  # 探测器阈值0.015，越低探测结果越多
-                                        nn_thresh=0.1,  # 匹配器阈值0.7,越高越难匹配
+                                        nn_thresh=0.1,  # 匹配器阈值0.7,越低越难匹配，目前此参数未在此处起作用
                                         cuda=False)  # GPU加速 默认false
                 interp = cv2.INTER_AREA  # 一种插值方法 一般用来缩小
                 img = cv2.resize(image, (image.shape[1], image.shape[0]), interpolation=interp)  # 把图片缩小到指定HW.
