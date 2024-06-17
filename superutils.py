@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 from PIL import Image
 import numpy as np
 import cv2
+from PIL import Image,ImageEnhance
 def myimshow(img, title=False,fname="test.jpg",size=6):
     fig = plt.figure(figsize=(size,size))
     if title:
@@ -136,3 +137,9 @@ def small_crop2big_img(img_list,img_size,loc):
         result[i:i+w,j:j+h]=img_list[index]
         index+=1
     return result
+def imgnorm(img):
+    img_float32 = np.float32(img)
+    img_NORM_MINMAX = img_float32.copy()
+    cv2.normalize(img_float32,img_NORM_MINMAX,0,255,cv2.NORM_MINMAX)
+    img_norm=img_NORM_MINMAX.astype('uint8')
+    return img_norm

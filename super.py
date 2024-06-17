@@ -4,7 +4,7 @@ import cv2
 
 
 
-def superfeature(path,h,w,ima,imb):
+def superfeature(path,h,w,ima,imb,dis=55):
     input=path
     camid=0
     H=h
@@ -19,7 +19,7 @@ def superfeature(path,h,w,ima,imb):
     fe = SuperPointFrontend(weights_path='./SuperPointPretrainedNetwork/superpoint_v1.pth',  # 权重的路径str
                             nms_dist=4,  # 非极大值抑制 int距离4
                             conf_thresh=0.055,  # 探测器阈值0.015，越低探测结果越多
-                            nn_thresh=0.3,  # 匹配器阈值0.7,越高越难匹配
+                            nn_thresh=0.6,  # 匹配器阈值0.7,越高越难匹配
                             cuda=False)  # GPU加速 默认false
     print('==> Successfully loaded pre-trained network.')
     # Create a window to display the demo.
@@ -60,22 +60,17 @@ def superfeature(path,h,w,ima,imb):
     #cv2.imshow("imgtwo", img22)
 
 
-    match = nn_match_two_way(desc, desc1, 0.4)
+    match = nn_match_two_way(desc, desc1, 0.7)#######越高越容易匹配
     #match = knn_match(desc, desc1,1)
-    
+    print("图1与图2距离约束前匹配对数", match.shape[1])
 ####################最后一个参数为像素距离约束#############################
-    pto,pto1,match=match_descriptors(pts, pts1, match,105)
+    pto,pto1,match=match_descriptors(pts, pts1, match,dis)
 
-    print("图1与图2匹配对数", match.shape[1])
-    out = drawMatches(imgx, pts, imgy,
-                       pts1, match)
-    #cv2.namedWindow("matcher", 0)
-    #cv2.imshow("matcher", out)
-
-    #cv2.waitKey(0)
+    print("图1与图2距离约束后匹配对数", match.shape[1])
+    # out = drawMatches(imgx, pts, imgy,pts1, match)
 
     print('==> Finshed Demo.')
-    return out,img11,img22,pto,pto1
+    return img11,img22,pto,pto1
 if __name__ == '__main__':
     imagin=['/home/yinghua/mmdetection/ver1_codes(2D)/testinput/']
     imagou=['/home/yinghua/mmdetection/ver1_codes(2D)/testvisual/']

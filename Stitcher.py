@@ -1,9 +1,5 @@
+﻿import cv2
 import numpy as np
-import cv2
-# from scipy.stats import mode
-import time
-import os
-import glob
 import re
 import copy
 from natsort import natsorted
@@ -49,6 +45,7 @@ class Stitcher(Utility.Method):
             direction = 4
         return direction
 
+
     def flowStitch(self, fileList, caculateOffsetMethod):
         """
         功能：序列拼接，从list的第一张拼接到最后一张，由于中间可能出现拼接失败，故记录截止文件索引
@@ -56,6 +53,85 @@ class Stitcher(Utility.Method):
         :param caculateOffsetMethod:计算偏移量方法
         :return: ((status, endfileIndex), stitchImage),（（拼接状态， 截止文件索引）， 拼接结果）
         """
+
+        def adjust_offset(imageA, imageB, scale_factor=0.3):
+            def update_offset(x):
+                nonlocal offset_x, offset_y
+                offset_x = int((cv2.getTrackbarPos('Offset X', 'Adjust Offset') - max_offset_x_scaled) * scale_factor)
+                offset_y = int((cv2.getTrackbarPos('Offset Y', 'Adjust Offset') - max_offset_y_scaled) * scale_factor)
+                combined_image = display_combined_image(scaled_imageA, scaled_imageB, offset_x, offset_y)
+                # 在图像上叠加显示当前的偏移值
+                cv2.putText(combined_image, f'Offset X: {int(offset_x / scale_factor)}', (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6,
+                            (255, 255, 255), 2)
+                cv2.putText(combined_image, f'Offset Y: {int(offset_y / scale_factor)}', (10, 60),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6,
+                            (255, 255, 255), 2)
+                cv2.imshow('Adjust Offset', combined_image)
+
+            def display_combined_image(imageA, imageB, offset_x, offset_y):
+                rows, cols = imageA.shape
+                combined_image = np.zeros((rows * 3, cols * 3), dtype=np.uint8)
+
+                # Place imageA in the center
+                combined_image[rows:2 * rows, cols:2 * cols] = imageA
+
+                # Calculate position for imageB in the combined image
+                y_start = rows + offset_y
+                y_end = y_start + rows
+                x_start = cols + offset_x
+                x_end = x_start + cols
+
+                # Ensure the indices are within bounds
+                y_start_combined = max(0, y_start)
+                y_end_combined = min(3 * rows, y_end)
+                x_start_combined = max(0, x_start)
+                x_end_combined = min(3 * cols, x_end)
+
+                y_start_imageB = max(0, -y_start)
+                y_end_imageB = min(rows, 3 * rows - y_start)
+                x_start_imageB = max(0, -x_start)
+                x_end_imageB = min(cols, 3 * cols - x_start)
+
+                # Blend imageB with the corresponding area in combined_image
+                roi = combined_image[y_start_combined:y_end_combined, x_start_combined:x_end_combined]
+                imageB_cropped = imageB[y_start_imageB:y_end_imageB, x_start_imageB:x_end_imageB]
+
+                blended = cv2.addWeighted(roi, 0.5, imageB_cropped, 0.5, 0)
+                combined_image[y_start_combined:y_end_combined, x_start_combined:x_end_combined] = blended
+
+                return combined_image
+
+            # Scale images
+            scaled_imageA = cv2.resize(imageA, (0, 0), fx=scale_factor, fy=scale_factor)
+            scaled_imageB = cv2.resize(imageB, (0, 0), fx=scale_factor, fy=scale_factor)
+
+            rows, cols = scaled_imageA.shape
+            max_offset_x = cols
+            max_offset_y = rows
+            max_offset_x_scaled = int(max_offset_x / scale_factor)
+            max_offset_y_scaled = int(max_offset_y / scale_factor)
+            offset_x, offset_y = 0, 0
+
+            cv2.namedWindow('Adjust Offset')
+            # 设置步长为1
+            cv2.createTrackbar('Offset X', 'Adjust Offset', max_offset_x_scaled, max_offset_x_scaled * 2, update_offset)
+            cv2.createTrackbar('Offset Y', 'Adjust Offset', max_offset_y_scaled, max_offset_y_scaled * 2, update_offset)
+
+            combined_image = display_combined_image(scaled_imageA, scaled_imageB, offset_x, offset_y)
+            cv2.imshow('Adjust Offset', combined_image)
+
+            while True:
+                if cv2.waitKey(1) & 0xFF == 13:  # Enter key to confirm
+                    break
+
+            cv2.destroyAllWindows()
+
+            # Scale offsets back to original resolution
+            offset_x = int(offset_x / scale_factor)
+            offset_y = int(offset_y / scale_factor)
+            return offset_x, offset_y
+
         self.printAndWrite("Stitching the directory which have " + str(fileList[0]))
         fileNum = len(fileList)
         offsetList = []
@@ -79,11 +155,16 @@ class Stitcher(Utility.Method):
                 break
             elif status == False and self.ishandle== True:
                 while True:
-                    print(f"please input the offset as a list (e.g., ):[-974, -2]")
-                    offset_input = input()  # 使用 input() 接收用户输入的 offset
+
+                    print(f"Adjust the offset for {fileList[fileIndex]} and {fileList[fileIndex + 1]}")
+                    offset_y, offset_x = adjust_offset(imageA, imageB, scale_factor=0.15)
+                    offset_input = f"[{offset_x},{offset_y}]"
+                    # print(f"please input the offset as a list (e.g., ):[-974, -2]")
+                    # offset_input = input()  # 使用 input() 接收用户输入的 offset
                     # 使用正则表达式匹配包含整数的输入
                     match = re.match(r'\[(-?\d+),(-?\d+)\]', offset_input)
                     if match:
+                        print(offset_input)
                         offset = [int(match.group(1)), int(match.group(2))]
                         offsetList.append(offset)
                         endfileIndex = fileIndex + 1
@@ -335,10 +416,11 @@ class Stitcher(Utility.Method):
         (imageA, imageB) = images
         offset = [0, 0]
         status = False
-        maxI = (np.floor(0.5 / self.roiRatio) + 1).astype(int)+ 1
+        # maxI = (np.floor(0.5 / self.roiRatio) + 1).astype(int)+ 1
+        maxI=2##暂时取消增长区域
         iniDirection = self.direction
         localDirection = iniDirection
-        for i in range(1, maxI):
+        for i in range(1, maxI):###搜索区域增大循环，最多次数为3
             # self.printAndWrite("  i=" + str(i) + " and maxI="+str(maxI))
             while(True):
                 # get the roi region of images
